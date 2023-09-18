@@ -10,6 +10,12 @@
   --color-red-dark: #e03131;
 }
 
+/* Für Webkit-basierte Browser (Chrome, Safari, etc.) */
+::-webkit-scrollbar {
+  width: 0; /* Verbergen Sie die vertikale Scrollleiste */
+  height: 0; /* Verbergen Sie die horizontale Scrollleiste (falls vorhanden) */
+}
+
 * {
   margin: 0;
   padding: 0;

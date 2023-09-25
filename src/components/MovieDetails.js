@@ -1,12 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import StarRating from "./StarRating";
 import Loader from "./Loader";
 import ErrorMessage from "./ErrorMessage";
+import { useKey } from "../useKey";
+
+const KEY = "6316f346";
 
 export default function MovieDetails({
   selectedId,
   onCloseMovie,
-  KEY,
   error,
   setError,
   onAddWatched,
@@ -16,7 +18,16 @@ export default function MovieDetails({
   const [isLoading, setIsLoading] = useState(false);
   const [userRating, setUserRating] = useState("");
 
-  const isWatched = watched.map((movie) => movie.imdbID).includes(selectedId);
+  const countRef = useRef(0);
+
+  useEffect(
+    function () {
+      if (userRating) countRef.current++;
+    },
+    [userRating]
+  );
+
+  const isWatched = watched?.map((movie) => movie.imdbID).includes(selectedId);
   const watchedUserRating = watched.find(
     (movie) => movie.imdbID === selectedId
   )?.userRating;
@@ -34,44 +45,37 @@ export default function MovieDetails({
     Genre: genre,
   } = movie;
 
-  useEffect(
-    function () {
-      function callback(e) {
-        if (e.code === "Escape") {
-          onCloseMovie();
-        }
-      }
+  const isTop = imdbRating > 8;
+  console.log(isTop);
 
-      document.addEventListener("keydown", callback);
+  function handleAdd() {
+    const newWatchedMovie = {
+      imdbID: selectedId,
+      title,
+      year,
+      poster,
+      imdbRating: Number(imdbRating),
+      runtime: runtime.split(" ").at(0),
+      userRating,
+      countRatingDecisions: countRef.current,
+    };
 
-      return function () {
-        document.removeEventListener("keydown", callback);
-      };
-    },
-    [onCloseMovie]
-  );
+    onAddWatched(newWatchedMovie);
+    onCloseMovie();
+  }
+
+  useKey("Escape", onCloseMovie);
 
   useEffect(
     function () {
       async function getMovieDetails() {
-        try {
-          setIsLoading(true);
-          setError("");
-          const res = await fetch(
-            `http://www.omdbapi.com/?apikey=${KEY}&i=${selectedId}`
-          );
-
-          if (!res.ok)
-            throw new Error("Something went wrong with fetch movie details");
-
-          const data = await res.json();
-
-          setMovie(data);
-        } catch (err) {
-          setError(err.message);
-        } finally {
-          setIsLoading(false);
-        }
+        setIsLoading(true);
+        const res = await fetch(
+          `http://www.omdbapi.com/?apikey=${KEY}&i=${selectedId}`
+        );
+        const data = await res.json();
+        setMovie(data);
+        setIsLoading(false);
       }
       getMovieDetails();
     },
@@ -91,25 +95,20 @@ export default function MovieDetails({
     [title]
   );
 
-  function handleAdd() {
-    const newWatchedMovie = {
-      imdbID: selectedId,
-      title,
-      year,
-      poster,
-      imdbRating: Number(imdbRating),
-      runtime: runtime.split(" ").at(0),
-      userRating,
-    };
-
-    onAddWatched(newWatchedMovie);
-    onCloseMovie();
-  }
+  // const [isTop, setIsTop] = useState(imdbRating > 8);
+  // console.log(isTop);
+  // useEffect(
+  //   function() {
+  //     setIsTop(imdbRating > 8);
+  //   },
+  //   [imdbRating]
+  // );
 
   return (
     <div className="details">
-      {isLoading && <Loader />}
-      {!isLoading && !error && (
+      {isLoading ? (
+        <Loader />
+      ) : (
         <>
           <header>
             <button className="btn-back" onClick={onCloseMovie}>
@@ -160,7 +159,6 @@ export default function MovieDetails({
           </section>
         </>
       )}
-      {error && <ErrorMessage message={error} />}
     </div>
   );
 }
